@@ -3,24 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>動画リスト（スマホ対応）</title>
+  <title>軽量動画リスト</title>
   <style>
     body {
       background: #111;
       color: #eee;
       font-family: sans-serif;
-      margin: 0;
       padding: 1em;
-    }
-
-    h2 {
-      font-size: 1.2em;
-      margin-bottom: 0.5em;
     }
 
     input[type="file"] {
       width: 100%;
-      font-size: 1em;
       margin-bottom: 1em;
     }
 
@@ -38,46 +31,32 @@
       cursor: pointer;
     }
 
-    .videoItem video {
+    .videoItem img {
       width: 100%;
-      height: auto;
       border: 2px solid #444;
       border-radius: 6px;
     }
 
     .videoItem div {
-      margin-top: 4px;
-      font-size: 0.85em;
+      font-size: 0.8em;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+      margin-top: 4px;
     }
 
     #player {
       width: 100%;
       max-width: 640px;
-      margin: 2em auto 0;
+      margin-top: 2em;
       display: block;
       border-radius: 10px;
-      box-shadow: 0 0 10px #000;
-    }
-
-    @media (max-width: 480px) {
-      .videoItem {
-        width: 48%;
-      }
-    }
-
-    @media (min-width: 768px) {
-      .videoItem {
-        width: 30%;
-      }
     }
   </style>
 </head>
 <body>
 
-<h2>動画を選択してリストに追加</h2>
+<h2>動画を選んで軽量リスト表示</h2>
 <input type="file" accept="video/*" multiple id="videoInput">
 
 <div id="videoList"></div>
@@ -94,29 +73,48 @@
       if (!file.type.startsWith('video/')) continue;
 
       const url = URL.createObjectURL(file);
-
-      const item = document.createElement('div');
-      item.className = 'videoItem';
-
       const video = document.createElement('video');
       video.src = url;
       video.muted = true;
       video.playsInline = true;
       video.preload = 'metadata';
-      video.currentTime = 1;
 
-      const label = document.createElement('div');
-      label.textContent = file.name;
+      video.addEventListener('loadeddata', () => {
+        video.currentTime = 1;
+      });
 
-      item.appendChild(video);
-      item.appendChild(label);
+      video.addEventListener('seeked', () => {
+        // サムネイルを canvas 経由で取得
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const thumbnailUrl = canvas.toDataURL(); // base64イメージ
 
-      item.onclick = () => {
-        player.src = url;
-        player.play();
-      };
+        // メモリ節約：video要素は即削除
+        URL.revokeObjectURL(url);
+        video.remove();
 
-      list.appendChild(item);
+        const item = document.createElement('div');
+        item.className = 'videoItem';
+
+        const img = document.createElement('img');
+        img.src = thumbnailUrl;
+
+        const label = document.createElement('div');
+        label.textContent = file.name;
+
+        item.appendChild(img);
+        item.appendChild(label);
+
+        item.onclick = () => {
+          player.src = URL.createObjectURL(file);
+          player.play();
+        };
+
+        list.appendChild(item);
+      });
     }
   });
 </script>
