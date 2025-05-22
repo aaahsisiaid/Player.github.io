@@ -1,123 +1,94 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>軽量動画リスト</title>
+  <meta charset="UTF-8" />
+  <title>動画リスト（高解像度サムネ付き）</title>
   <style>
-    body {
-      background: #111;
-      color: #eee;
-      font-family: sans-serif;
-      padding: 1em;
+    body { background: #000; color: #ccc; font-family: sans-serif; padding: 10px; }
+    input { margin-bottom: 10px; }
+    .item {
+      display: flex; align-items: center; margin-bottom: 5px;
+      cursor: pointer; border-bottom: 1px solid #444; padding: 4px 0;
     }
-
-    input[type="file"] {
-      width: 100%;
-      margin-bottom: 1em;
-    }
-
-    #videoList {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .videoItem {
-      width: 45%;
-      max-width: 160px;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .videoItem img {
-      width: 100%;
-      border: 2px solid #444;
-      border-radius: 6px;
-    }
-
-    .videoItem div {
-      font-size: 0.8em;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      margin-top: 4px;
-    }
-
-    #player {
-      width: 100%;
-      max-width: 640px;
-      margin-top: 2em;
+    .item:hover { background: #222; }
+    .thumb {
+      width: 120px;
+      height: auto;
+      object-fit: contain;
+      margin-right: 10px;
+      background: #222;
       display: block;
-      border-radius: 10px;
+    }
+    .name {
+      flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    video#player {
+      width: 100%; max-height: 50vh; margin-top: 10px; background: #000;
     }
   </style>
 </head>
 <body>
+  <h3>動画ファイルを選択してください</h3>
+  <input type="file" accept="video/*" multiple />
+  <div id="videoList"></div>
+  <video id="player" controls></video>
 
-<h2>動画を選んで軽量リスト表示</h2>
-<input type="file" accept="video/*" multiple id="videoInput">
+  <script>
+    const input = document.querySelector('input[type="file"]');
+    const list = document.getElementById('videoList');
+    const player = document.getElementById('player');
 
-<div id="videoList"></div>
+    input.addEventListener('change', () => {
+      list.innerHTML = '';
+      const files = Array.from(input.files);
 
-<video id="player" controls></video>
+      files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement('video');
 
-<script>
-  const input = document.getElementById('videoInput');
-  const list = document.getElementById('videoList');
-  const player = document.getElementById('player');
+        video.preload = 'metadata';
+        video.muted = true;
+        video.src = url;
 
-  input.addEventListener('change', () => {
-    for (const file of input.files) {
-      if (!file.type.startsWith('video/')) continue;
+        video.addEventListener('loadedmetadata', () => {
+          // 動画長さの半分か1秒目の早い方へ移動
+          video.currentTime = Math.min(1, video.duration / 2);
+        });
 
-      const url = URL.createObjectURL(file);
-      const video = document.createElement('video');
-      video.src = url;
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
+        video.addEventListener('seeked', () => {
+          const videoAspect = video.videoWidth / video.videoHeight;
+          const canvasWidth = 320;
+          const canvasHeight = Math.round(canvasWidth / videoAspect);
 
-      video.addEventListener('loadeddata', () => {
-        video.currentTime = 1;
+          const canvas = document.createElement('canvas');
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbnail = canvas.toDataURL();
+
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `<img class="thumb" src="${thumbnail}" alt="サムネイル"><div class="name">${file.name}</div>`;
+
+          div.addEventListener('click', () => {
+            player.src = url;
+            player.play();
+          });
+
+          list.appendChild(div);
+          video.remove();
+        });
+
+        video.addEventListener('error', () => {
+          const div = document.createElement('div');
+          div.textContent = `読み込み失敗: ${file.name}`;
+          div.style.color = 'red';
+          list.appendChild(div);
+          video.remove();
+        });
       });
-
-      video.addEventListener('seeked', () => {
-        // サムネイルを canvas 経由で取得
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const thumbnailUrl = canvas.toDataURL(); // base64イメージ
-
-        // メモリ節約：video要素は即削除
-        URL.revokeObjectURL(url);
-        video.remove();
-
-        const item = document.createElement('div');
-        item.className = 'videoItem';
-
-        const img = document.createElement('img');
-        img.src = thumbnailUrl;
-
-        const label = document.createElement('div');
-        label.textContent = file.name;
-
-        item.appendChild(img);
-        item.appendChild(label);
-
-        item.onclick = () => {
-          player.src = URL.createObjectURL(file);
-          player.play();
-        };
-
-        list.appendChild(item);
-      });
-    }
-  });
-</script>
-
+    });
+  </script>
 </body>
 </html>
