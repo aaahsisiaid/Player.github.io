@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>動画リスト（スマホ対応）</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1em;
+    }
+
+    h2 {
+      font-size: 1.2em;
+      margin-bottom: 0.5em;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+
+    #videoList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .videoItem {
+      width: 45%;
+      max-width: 160px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .videoItem video {
+      width: 100%;
+      height: auto;
+      border: 2px solid #444;
+      border-radius: 6px;
+    }
+
+    .videoItem div {
+      margin-top: 4px;
+      font-size: 0.85em;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    #player {
+      width: 100%;
+      max-width: 640px;
+      margin: 2em auto 0;
+      display: block;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
+    }
+
+    @media (max-width: 480px) {
+      .videoItem {
+        width: 48%;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .videoItem {
+        width: 30%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h2>動画を選択してリストに追加</h2>
+<input type="file" accept="video/*" multiple id="videoInput">
+
+<div id="videoList"></div>
+
+<video id="player" controls></video>
+
+<script>
+  const input = document.getElementById('videoInput');
+  const list = document.getElementById('videoList');
+  const player = document.getElementById('player');
+
+  input.addEventListener('change', () => {
+    for (const file of input.files) {
+      if (!file.type.startsWith('video/')) continue;
+
+      const url = URL.createObjectURL(file);
+
+      const item = document.createElement('div');
+      item.className = 'videoItem';
+
+      const video = document.createElement('video');
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      video.currentTime = 1;
+
+      const label = document.createElement('div');
+      label.textContent = file.name;
+
+      item.appendChild(video);
+      item.appendChild(label);
+
+      item.onclick = () => {
+        player.src = url;
+        player.play();
+      };
+
+      list.appendChild(item);
+    }
+  });
+</script>
+
+</body>
+</html>
